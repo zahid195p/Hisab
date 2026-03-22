@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hisaab">
+<title>Hisaab · حساب</title>
+<style>
+:root {
+  --bg:#0c0c15; --surface:#131320; --card:#1a1a2e; --card2:#20203a;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+  --text:#eeeef8; --muted:#7070a0; --faint:#252540;
+  --amber:#f5a623; --amber-bg:rgba(245,166,35,0.13);
+  --green:#34d399; --green-bg:rgba(52,211,153,0.13);
+  --red:#f87171; --red-bg:rgba(248,113,113,0.13);
+  --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.13);
+  --purple:#a78bfa; --pink:#f472b6;
+  --nav:68px; --safe:env(safe-area-inset-bottom,16px); --top:env(safe-area-inset-top,0px);
+  --r:16px;
+}
+@media(prefers-color-scheme:light){
+  :root{
+    --bg:#f2f1ed; --surface:#e8e7e1; --card:#fff; --card2:#f8f7f2;
+    --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.12);
+    --text:#18182c; --muted:#6868a0; --faint:#e0dfd6;
+    --amber:#c47f0d; --amber-bg:rgba(196,127,13,0.1);
+    --green:#059669; --green-bg:rgba(5,150,105,0.1);
+    --red:#dc2626; --red-bg:rgba(220,38,38,0.1);
+    --blue:#2563eb; --blue-bg:rgba(37,99,235,0.1);
+  }
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;overflow:hidden}
+#app{max-width:430px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.screen{display:none;overflow-y:auto;flex:1;padding-bottom:calc(var(--nav) + var(--safe) + 12px);-webkit-overflow-scrolling:touch}
+.screen.active{display:block}
+.pt{padding-top:calc(var(--top) + 8px)}
+/* Typography */
+.title{font-size:28px;font-weight:800;letter-spacing:-0.6px}
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.mono{font-family:ui-monospace,'SF Mono',Menlo,monospace}
+/* Layout helpers */
+.px{padding-left:20px;padding-right:20px}
+.ph{padding:16px 20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+/* Bottom nav */
+#nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;height:calc(var(--nav) + var(--safe));
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:flex-start;z-index:100;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0;border:none;background:none;color:var(--muted);font-size:9px;font-weight:700;font-family:inherit;cursor:pointer;gap:4px;transition:color .15s;letter-spacing:.5px;text-transform:uppercase}
+.nb.active{color:var(--amber)}
+.nb svg{width:22px;height:22px}
+.nb-add{
+  flex:none;width:52px;height:52px;border-radius:50%;
+  background:var(--amber);color:#000;font-size:28px;
+  margin:-16px 8px 0;box-shadow:0 4px 24px rgba(245,166,35,.5);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;
+}
+/* Modals */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:200;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:430px;max-height:92dvh;overflow-y:auto;padding:0 20px calc(var(--safe) + 20px);animation:up .28s cubic-bezier(.32,.72,0,1)}
+@keyframes up{from{transform:translateY(100%)}}
+.handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 18px;cursor:pointer}
+.modal-title{font-size:21px;font-weight:800;margin-bottom:18px;letter-spacing:-.3px}
+/* Forms */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.fi{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.fi:focus{border-color:var(--amber)}
+select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 4.5L11 1' stroke='%237070a0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+.tabs{display:flex;background:var(--card);border-radius:12px;padding:4px;margin-bottom:18px;gap:3px}
+.tab{flex:1;padding:9px 4px;border:none;border-radius:9px;background:none;color:var(--muted);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.tab.active{background:var(--amber);color:#000}
+/* Buttons */
+.btn{width:100%;padding:14px;border:none;border-radius:14px;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;transition:transform .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--amber);color:#000}
+.btn-g{background:var(--card);color:var(--text);border:1.5px solid var(--border)}
+.btn-d{background:var(--red-bg);color:var(--red)}
+.btn-sm{width:auto;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-family:inherit}
+/* Wallet chips */
+.wgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.wchip{padding:11px 12px;border-radius:12px;border:2px solid transparent;background:var(--card);cursor:pointer;transition:all .15s}
+.wchip.sel{border-color:var(--amber);background:var(--amber-bg)}
+.wchip .wn{font-size:13px;font-weight:700}
+.wchip .wb{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;margin-top:2px}
+/* Category grid */
+.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.citem{display:flex;flex-direction:column;align-items:center;padding:9px 4px;border-radius:11px;border:2px solid transparent;background:var(--card);cursor:pointer;gap:3px;transition:all .15s}
+.citem.sel{border-color:var(--amber);background:var(--amber-bg)}
+.citem .ce{font-size:20px}
+.citem .cn{font-size:9px;font-weight:700;color:var(--muted);text-align:center;line-height:1.3}
+/* Dashboard */
+.nw-card{
+  margin:0 20px;
+  background:linear-gradient(135deg,#1c1c35 0%,#23234a 100%);
+  border:1px solid rgba(245,166,35,.18);
+  border-radius:20px;padding:22px;position:relative;overflow:hidden;
+}
+@media(prefers-color-scheme:light){.nw-card{background:linear-gradient(135deg,#fff8eb 0%,#fffcf0 100%)}}
+.nw-card::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;background:radial-gradient(circle,rgba(245,166,35,.18) 0%,transparent 70%);pointer-events:none}
+.nw-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.nw-amt{font-family:ui-monospace,monospace;font-size:38px;font-weight:800;letter-spacing:-2px;line-height:1}
+.nw-sub{font-size:12px;color:var(--muted);margin-top:5px;font-family:ui-monospace,monospace}
+.nw-pills{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.pill{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);background:rgba(0,0,0,.2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit}
+@media(prefers-color-scheme:light){.pill{background:rgba(0,0,0,.06)}}
+.pill.active{background:var(--amber);color:#000;border-color:var(--amber)}
+/* Stat pills */
+.srow{display:flex;gap:10px;padding:0 20px;margin-bottom:14px}
+.spill{flex:1;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 11px}
+.sp-l{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.sp-v{font-family:ui-monospace,monospace;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Transaction row */
+.txrow{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border)}
+.txrow:last-child{border-bottom:none}
+.txicon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.txcat{font-size:13px;font-weight:700}
+.txdet{font-size:11px;color:var(--muted);margin-top:1px}
+.txamt{margin-left:auto;text-align:right}
+.txamt .a{font-family:ui-monospace,monospace;font-size:14px;font-weight:800}
+.txamt .d{font-size:10px;color:var(--muted);margin-top:1px}
+.spend-c{color:var(--red)}
+.income-c{color:var(--green)}
+.transfer-c{color:var(--blue)}
+/* Wallet row */
+.wrow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.wrow:last-child{border-bottom:none}
+.wicon{width:42px;height:42px;border-radius:12px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.wname{font-size:15px;font-weight:700}
+.wcur{font-size:11px;color:var(--muted);margin-top:1px}
+.wamt{margin-left:auto;font-family:ui-monospace,monospace;font-size:17px;font-weight:800}
+.wedit{width:32px;height:32px;border-radius:8px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;margin-left:8px}
+/* Rate bar */
+.ratebar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface)}
+/* Analytics */
+.month-nav{display:flex;align-items:center;justify-content:space-between;padding:0 20px;margin-bottom:14px}
+.mnav-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.mmonth{font-size:17px;font-weight:800}
+.legend-item{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.legend-label{font-size:11px;color:var(--muted);flex:1}
+.legend-val{font-size:11px;font-family:ui-monospace,monospace;font-weight:700}
+/* Debt */
+.dcard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:15px;margin-bottom:10px}
+.dname{font-size:16px;font-weight:800}
+.damt{font-family:ui-monospace,monospace;font-size:17px;font-weight:800;color:var(--red)}
+.pbar{height:5px;background:var(--faint);border-radius:3px;overflow:hidden;margin:9px 0 4px}
+.pfill{height:100%;border-radius:3px;background:var(--green);transition:width .5s}
+.dactions{display:flex;gap:7px;margin-top:11px}
+.dab{flex:1;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.dab.pay{background:var(--green-bg);color:var(--green);border-color:transparent}
+.dab.del{background:var(--red-bg);color:var(--red);border-color:transparent}
+/* Nudge */
+.nudge{background:var(--red-bg);border:1px solid rgba(248,113,113,.2);border-radius:14px;padding:13px;margin-bottom:14px}
+.nudge-t{font-size:13px;font-weight:800;color:var(--red);margin-bottom:3px}
+.nudge-s{font-size:12px;color:var(--muted);line-height:1.5}
+/* Empty */
+.empty{text-align:center;padding:36px 20px;color:var(--muted)}
+.empty-i{font-size:38px;margin-bottom:10px}
+.empty-t{font-size:14px}
+/* Inline flex row */
+.row{display:flex;align-items:center;gap:8px}
+.spacer{flex:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Rate bar -->
+<div class="ratebar">
+  <span>💱 <span id="rateText">—</span></span>
+  <span id="rateAge" style="font-size:10px;opacity:.7"></span>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: DASHBOARD
+═══════════════════════════════════════════ -->
+<div class="screen active pt" id="s-home">
+  <div class="ph row" style="padding-bottom:10px">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)">حساب</div>
+      <div class="title">Hisaab</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-sm" onclick="exportData()">💾 Backup</button>
+  </div>
+
+  <div class="nw-card" id="nwCard">
+    <div class="nw-label">Net Worth</div>
+    <div class="nw-amt mono" id="nwAmt">—</div>
+    <div class="nw-sub" id="nwSub">—</div>
+    <div class="nw-pills">
+      <button class="pill active" id="pill-RMB" onclick="setCView('RMB')">¥ RMB</button>
+      <button class="pill" id="pill-PKR" onclick="setCView('PKR')">₨ PKR</button>
+      <button class="pill" id="pill-native" onclick="setCView('native')">Native</button>
+    </div>
+  </div>
+
+  <div class="srow" style="margin-top:14px">
+    <div class="spill">
+      <div class="sp-l">This Month</div>
+      <div class="sp-v" id="statMonth" style="color:var(--red)">—</div>
+    </div>
+    <div class="spill">
+      <div class="sp-l">Total Debt</div>
+      <div class="sp-v" id="statDebt">—</div>
+    </div>
+    <div class="spill">
+      <div class="sp-l">Stipend</div>
+      <div class="sp-v" style="color:var(--green)">¥3,000</div>
+    </div>
+  </div>
+
+  <div class="px"><div class="section-label">Recent</div></div>
+  <div class="px"><div class="card" id="recentList"><div class="empty"><div class="empty-i">📭</div><div class="empty-t">No transactions yet. Hit + to add one!</div></div></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: WALLETS
+═══════════════════════════════════════════ -->
+<div class="screen pt" id="s-wallets">
+  <div class="ph row" style="padding-bottom:10px">
+    <div class="title">Wallets</div>
+    <div class="spacer"></div>
+    <button class="btn-sm" onclick="openAddWallet()">+ Add</button>
+  </div>
+  <div class="px"><div class="card" id="walletList">Loading…</div></div>
+  <div class="px" style="margin-top:12px">
+    <button class="btn btn-g" onclick="openTransferDirect()">⇄ Transfer Between Wallets</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: ANALYTICS
+═══════════════════════════════════════════ -->
+<div class="screen pt" id="s-analytics">
+  <div class="ph" style="padding-bottom:10px"><div class="title">Analytics</div></div>
+  <div class="month-nav">
+    <button class="mnav-btn" onclick="prevMon()">‹</button>
+    <div class="mmonth" id="mLabel">—</div>
+    <button class="mnav-btn" onclick="nextMon()">›</button>
+  </div>
+  <div class="px" id="nudgeBanner" style="display:none">
+    <div class="nudge"><div class="nudge-t">🍔 Food Delivery Alert</div><div class="nudge-s" id="nudgeText">—</div></div>
+  </div>
+  <div class="px">
+    <div class="section-label">Spending Breakdown</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:16px">
+        <svg id="donut" viewBox="0 0 160 160" width="130" height="130" style="flex-shrink:0"></svg>
+        <div id="legend" style="flex:1"></div>
+      </div>
+      <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">Total spent: <span class="mono" id="chartTotal" style="font-weight:800;color:var(--text)">—</span></div>
+    </div>
+  </div>
+  <div class="px" style="margin-top:14px">
+    <div class="section-label">All Transactions</div>
+    <div class="card" id="analyticsTx"><div class="empty"><div class="empty-i">📊</div><div class="empty-t">No data this month</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: DEBTS
+═══════════════════════════════════════════ -->
+<div class="screen pt" id="s-debts">
+  <div class="ph row" style="padding-bottom:10px">
+    <div class="title">Debts</div>
+    <div class="spacer"></div>
+    <button class="btn-sm" onclick="openAddDebt(null)">+ Add</button>
+  </div>
+  <div class="px">
+    <div id="debtSummaryBox" style="display:none;background:var(--red-bg);border:1px solid rgba(248,113,113,.18);border-radius:14px;padding:15px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px">Total Remaining Debt</div>
+      <div class="mono" id="debtSumAmt" style="font-size:28px;font-weight:800;color:var(--red)">—</div>
+    </div>
+    <div id="debtList"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     BOTTOM NAV
+═══════════════════════════════════════════ -->
+<nav id="nav">
+  <button class="nb active" data-s="home" onclick="goTo('home',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    Home
+  </button>
+  <button class="nb" data-s="wallets" onclick="goTo('wallets',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+    Wallets
+  </button>
+  <button class="nb-add" onclick="openAddTx()">+</button>
+  <button class="nb" data-s="analytics" onclick="goTo('analytics',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    Analytics
+  </button>
+  <button class="nb" data-s="debts" onclick="goTo('debts',this)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Debts
+  </button>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MODAL: ADD TRANSACTION
+═══════════════════════════════════════════ -->
+<div class="overlay" id="m-tx">
+  <div class="sheet">
+    <div class="handle" onclick="close('m-tx')"></div>
+    <div class="modal-title">Add Transaction</div>
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('spend',this)">Spend</button>
+      <button class="tab" onclick="setTab('income',this)">Income</button>
+      <button class="tab" onclick="setTab('transfer',this)">Transfer</button>
+    </div>
+
+    <!-- SPEND -->
+    <div id="tp-spend">
+      <div class="fg">
+        <label class="fl">Amount</label>
+        <div class="row">
+          <select class="fi" id="s-cur" style="width:95px;flex-shrink:0" onchange="refreshWChips('spend')">
+            <option value="RMB">¥ RMB</option>
+            <option value="PKR">₨ PKR</option>
+          </select>
+          <input class="fi mono" type="number" id="s-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">From Wallet</label>
+        <div class="wgrid" id="s-wals"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Category</label>
+        <div class="cgrid" id="s-cats"></div>
+        <button class="btn-sm" style="width:100%;text-align:center" onclick="openAddCat()">+ New Category</button>
+      </div>
+      <div class="fg">
+        <label class="fl">Note (optional)</label>
+        <input class="fi" type="text" id="s-note" placeholder="What was this for?">
+      </div>
+      <div class="fg">
+        <label class="fl">Date</label>
+        <input class="fi" type="date" id="s-date">
+      </div>
+      <button class="btn btn-p" onclick="saveSpend()">Save Expense</button>
+    </div>
+
+    <!-- INCOME -->
+    <div id="tp-income" style="display:none">
+      <div class="fg">
+        <label class="fl">Amount</label>
+        <div class="row">
+          <select class="fi" id="i-cur" style="width:95px;flex-shrink:0" onchange="refreshWChips('income')">
+            <option value="RMB">¥ RMB</option>
+            <option value="PKR">₨ PKR</option>
+          </select>
+          <input class="fi mono" type="number" id="i-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">To Wallet</label>
+        <div class="wgrid" id="i-wals"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Source</label>
+        <input class="fi" type="text" id="i-src" placeholder="e.g. Stipend, Accommodation Allowance">
+      </div>
+      <div class="fg">
+        <label class="fl">Date</label>
+        <input class="fi" type="date" id="i-date">
+      </div>
+      <button class="btn btn-p" onclick="saveIncome()">Save Income</button>
+    </div>
+
+    <!-- TRANSFER -->
+    <div id="tp-transfer" style="display:none">
+      <div class="fg">
+        <label class="fl">Amount (in From-wallet currency)</label>
+        <input class="fi mono" type="number" id="t-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
+      </div>
+      <div class="fg">
+        <label class="fl">From</label>
+        <select class="fi" id="t-from"></select>
+      </div>
+      <div class="fg">
+        <label class="fl">To</label>
+        <select class="fi" id="t-to"></select>
+      </div>
+      <div id="t-rate-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:10px;background:var(--blue-bg);border-radius:10px;display:none"></div>
+      <div class="fg">
+        <label class="fl">Note (optional)</label>
+        <input class="fi" type="text" id="t-note" placeholder="e.g. Sent home, Top-up">
+      </div>
+      <div class="fg">
+        <label class="fl">Date</label>
+        <input class="fi" type="date" id="t-date">
+      </div>
+      <button class="btn btn-p" onclick="saveTransfer()">Save Transfer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: WALLET
+═══════════════════════════════════════════ -->
+<div class="overlay" id="m-wallet">
+  <div class="sheet">
+    <div class="handle" onclick="close('m-wallet')"></div>
+    <div class="modal-title" id="wModalTitle">Add Wallet</div>
+    <div class="fg"><label class="fl">Wallet Name</label><input class="fi" type="text" id="w-name" placeholder="e.g. AliPay"></div>
+    <div class="fg"><label class="fl">Currency</label>
+      <select class="fi" id="w-cur">
+        <option value="RMB">¥ RMB — Chinese Yuan</option>
+        <option value="PKR">₨ PKR — Pakistani Rupee</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Current Balance</label><input class="fi mono" type="number" id="w-bal" placeholder="0.00" inputmode="decimal" style="font-size:20px;font-weight:800"></div>
+    <div class="fg"><label class="fl">Icon / Emoji</label><input class="fi" type="text" id="w-icon" placeholder="💳" maxlength="4"></div>
+    <input type="hidden" id="w-id">
+    <button class="btn btn-p" onclick="saveWallet()">Save Wallet</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-d" id="w-del" style="display:none" onclick="deleteWallet()">Delete Wallet</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: DEBT
+═══════════════════════════════════════════ -->
+<div class="overlay" id="m-debt">
+  <div class="sheet">
+    <div class="handle" onclick="close('m-debt')"></div>
+    <div class="modal-title" id="dModalTitle">Add Debt</div>
+    <div class="fg"><label class="fl">Person's Name</label><input class="fi" type="text" id="d-person" placeholder="e.g. Hamza Bhai"></div>
+    <div class="fg">
+      <label class="fl">Amount You Owe</label>
+      <div class="row">
+        <select class="fi" id="d-cur" style="width:95px;flex-shrink:0">
+          <option value="RMB">¥ RMB</option>
+          <option value="PKR">₨ PKR</option>
+        </select>
+        <input class="fi mono" type="number" id="d-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Already Paid Back</label><input class="fi mono" type="number" id="d-paid" placeholder="0" inputmode="decimal"></div>
+    <div class="fg"><label class="fl">Note (optional)</label><input class="fi" type="text" id="d-note" placeholder="Context…"></div>
+    <input type="hidden" id="d-id">
+    <button class="btn btn-p" onclick="saveDebt()">Save Debt</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-d" id="d-del" style="display:none" onclick="deleteDebt()">Delete This Debt</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: CATEGORY
+═══════════════════════════════════════════ -->
+<div class="overlay" id="m-cat">
+  <div class="sheet">
+    <div class="handle" onclick="close('m-cat')"></div>
+    <div class="modal-title">New Category</div>
+    <div class="fg"><label class="fl">Name</label><input class="fi" type="text" id="c-name" placeholder="e.g. Coffee"></div>
+    <div class="fg"><label class="fl">Icon / Emoji</label><input class="fi" type="text" id="c-icon" placeholder="☕" maxlength="4"></div>
+    <button class="btn btn-p" onclick="saveCat()">Add Category</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL: LOG PAYMENT
+═══════════════════════════════════════════ -->
+<div class="overlay" id="m-pay">
+  <div class="sheet">
+    <div class="handle" onclick="close('m-pay')"></div>
+    <div class="modal-title">Log Payment</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;color:var(--muted)" id="pay-to">To: —</div>
+      <div class="mono" id="pay-rem" style="font-size:22px;font-weight:800;color:var(--red)">—</div>
+    </div>
+    <div class="fg"><label class="fl">Amount Paid</label><input class="fi mono" type="number" id="pay-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800"></div>
+    <input type="hidden" id="pay-id">
+    <button class="btn btn-p" onclick="savePay()">Log Payment</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DEFAULT DATA
+// ══════════════════════════════════════════
+const DEFAULT_CATS = [
+  {id:'food_delivery',name:'Food Delivery',icon:'🍔',color:'#f59e0b'},
+  {id:'groceries',name:'Groceries',icon:'🛒',color:'#10b981'},
+  {id:'transport',name:'Transport',icon:'🚌',color:'#3b82f6'},
+  {id:'shopping',name:'Shopping',icon:'📦',color:'#8b5cf6'},
+  {id:'subscriptions',name:'Subscriptions',icon:'📱',color:'#06b6d4'},
+  {id:'accommodation',name:'Accommodation',icon:'🏠',color:'#f97316'},
+  {id:'sent_home',name:'Sent Home',icon:'💸',color:'#ec4899'},
+  {id:'debt_repay',name:'Debt Payment',icon:'🤝',color:'#14b8a6'},
+  {id:'academic',name:'Academic',icon:'📚',color:'#a855f7'},
+  {id:'misc',name:'Misc',icon:'❓',color:'#6b7280'},
+];
+const DEFAULT_WALLETS = [
+  {id:uid(),name:'WeChat Pay',icon:'💚',currency:'RMB',balance:0},
+  {id:uid(),name:'AliPay',icon:'🔵',currency:'RMB',balance:0},
+  {id:uid(),name:'BOC Card',icon:'🏦',currency:'RMB',balance:0},
+  {id:uid(),name:'Sadapay',icon:'💳',currency:'PKR',balance:0},
+  {id:uid(),name:'JazzCash',icon:'🟠',currency:'PKR',balance:0},
+];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let D = {}; // the full data object
+let cView = 'RMB';
+let selW = {}; // {spend:id, income:id}
+let selCat = null;
+let txTab = 'spend';
+let analyticsYM = ym(new Date());
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function uid(){return Math.random().toString(36).slice(2,9)}
+function ym(d){return d.toISOString().slice(0,7)}
+function today(){return new Date().toISOString().slice(0,10)}
+function fmt(n,cur){
+  const sym = cur==='RMB'?'¥':'₨';
+  const abs = Math.abs(n);
+  const s = abs>=10000 ? abs.toLocaleString('en',{maximumFractionDigits:0}) : abs.toFixed(abs<100?2:0);
+  return sym+s;
+}
+function mlabel(ym){
+  const [y,m]=ym.split('-');
+  return new Date(+y,+m-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+}
+const CAT_COLORS=['#f59e0b','#ef4444','#3b82f6','#10b981','#8b5cf6','#ec4899','#06b6d4','#f97316','#a855f7','#6b7280'];
+
+// ══════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════
+function save(){localStorage.setItem('hisaab2',JSON.stringify(D))}
+function load(){
+  try{
+    const s=localStorage.getItem('hisaab2');
+    if(s){D=JSON.parse(s)}
+    else{reset()}
+  }catch(e){reset()}
+  if(!D.wallets)D.wallets=DEFAULT_WALLETS.map(w=>({...w,id:uid()}));
+  if(!D.transactions)D.transactions=[];
+  if(!D.debts)D.debts=[];
+  if(!D.categories)D.categories=[...DEFAULT_CATS];
+  if(!D.rate)D.rate={v:38.5,t:0};
+  if(!D.settings)D.settings={cv:'RMB'};
+}
+function reset(){
+  D={wallets:DEFAULT_WALLETS.map(w=>({...w,id:uid()})),transactions:[],debts:[],categories:[...DEFAULT_CATS],rate:{v:38.5,t:0},settings:{cv:'RMB'}};
+  save();
+}
+
+// ══════════════════════════════════════════
+// EXCHANGE RATE
+// ══════════════════════════════════════════
+async function fetchRate(){
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/CNY',{signal:AbortSignal.timeout(6000)});
+    const j=await r.json();
+    if(j.rates&&j.rates.PKR){D.rate={v:j.rates.PKR,t:Date.now()};save()}
+  }catch(e){}
+  renderRateBar();
+}
+function renderRateBar(){
+  const rate=D.rate.v;
+  document.getElementById('rateText').textContent=`1 RMB = ${rate.toFixed(2)} PKR`;
+  const t=D.rate.t;
+  if(t){
+    const m=Math.round((Date.now()-t)/60000);
+    document.getElementById('rateAge').textContent=m<60?`${m}m ago`:`${Math.round(m/60)}h ago`;
+  }else{
+    document.getElementById('rateAge').textContent='fallback rate';
+  }
+}
+
+// Currency conversion helpers
+function toRMB(amt,cur){return cur==='RMB'?amt:amt/D.rate.v}
+function toPKR(amt,cur){return cur==='PKR'?amt:amt*D.rate.v}
+function toDisp(amt,cur){
+  if(cView==='RMB')return{a:toRMB(amt,cur),c:'RMB'};
+  if(cView==='PKR')return{a:toPKR(amt,cur),c:'PKR'};
+  return{a:amt,c:cur};
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+let currentS='home';
+function goTo(s,btn){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById('s-'+s).classList.add('active');
+  document.querySelectorAll('.nb[data-s]').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  currentS=s;
+  render(s);
+}
+function render(s){
+  if(s==='home')renderHome();
+  if(s==='wallets')renderWallets();
+  if(s==='analytics')renderAnalytics();
+  if(s==='debts')renderDebts();
+}
+
+// ══════════════════════════════════════════
+// CURRENCY VIEW
+// ══════════════════════════════════════════
+function setCView(v){
+  cView=v; D.settings.cv=v; save();
+  ['RMB','PKR','native'].forEach(x=>{
+    const el=document.getElementById('pill-'+x);
+    if(el)el.classList.toggle('active',x===v);
+  });
+  render(currentS);
+}
+
+// ══════════════════════════════════════════
+// RENDER: HOME
+// ══════════════════════════════════════════
+function renderHome(){
+  // Net worth
+  let assetRMB=D.wallets.reduce((s,w)=>s+toRMB(w.balance,w.currency),0);
+  let debtRMB=D.debts.reduce((s,d)=>s+toRMB(Math.max(0,d.amount-(d.paid||0)),d.currency),0);
+  let netRMB=assetRMB-debtRMB;
+
+  let dispAmt, dispSub;
+  if(cView==='PKR'){
+    dispAmt=fmt(netRMB*D.rate.v,'PKR');
+    dispSub=`Assets ${fmt(assetRMB*D.rate.v,'PKR')} · Debt ${fmt(debtRMB*D.rate.v,'PKR')}`;
+  }else if(cView==='native'){
+    const rmbWals=D.wallets.filter(w=>w.currency==='RMB').reduce((s,w)=>s+w.balance,0);
+    const pkrWals=D.wallets.filter(w=>w.currency==='PKR').reduce((s,w)=>s+w.balance,0);
+    dispAmt=fmt(rmbWals,'RMB')+' + '+fmt(pkrWals,'PKR');
+    dispSub='Minus debt: '+fmt(debtRMB,'RMB')+' equiv.';
+  }else{
+    dispAmt=fmt(netRMB,'RMB');
+    dispSub=`Assets ${fmt(assetRMB,'RMB')} · Debt ${fmt(debtRMB,'RMB')}`;
+  }
+
+  const nwEl=document.getElementById('nwAmt');
+  nwEl.textContent=dispAmt;
+  nwEl.style.color=netRMB<0?'var(--red)':'var(--text)';
+  document.getElementById('nwSub').textContent=dispSub;
+
+  // This month spend
+  const thisYM=ym(new Date());
+  const mSpend=D.transactions.filter(t=>t.type==='spend'&&t.date&&t.date.startsWith(thisYM)).reduce((s,t)=>{
+    const d=toDisp(t.amount,t.currency);return s+d.a;
+  },0);
+  const dispC=cView==='PKR'?'PKR':'RMB';
+  document.getElementById('statMonth').textContent=fmt(mSpend,dispC);
+
+  // Debt
+  document.getElementById('statDebt').textContent=fmt(cView==='PKR'?debtRMB*D.rate.v:debtRMB,dispC);
+  document.getElementById('statDebt').style.color=debtRMB>0?'var(--red)':'var(--green)';
+
+  // Recent txs
+  const recent=[...D.transactions].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).slice(0,8);
+  const el=document.getElementById('recentList');
+  el.innerHTML=recent.length?recent.map(txHtml).join(''):'<div class="empty"><div class="empty-i">📭</div><div class="empty-t">No transactions yet. Hit + to add one!</div></div>';
+}
+
+function txHtml(t){
+  const cat=D.categories.find(c=>c.id===t.category)||{icon:'💸',name:t.category||'—',color:'#888'};
+  const w=D.wallets.find(x=>x.id===t.walletId)||{name:'—'};
+  const tw=t.toWalletId?D.wallets.find(x=>x.id===t.toWalletId):null;
+  const isT=t.type==='transfer',isI=t.type==='income';
+  const sign=isI?'+':isT?'':'- ';
+  const col=isI?'income-c':isT?'transfer-c':'spend-c';
+  const ibg=isI?'var(--green-bg)':isT?'var(--blue-bg)':'var(--red-bg)';
+  const icon=isT?'⇄':cat.icon;
+  const catName=isT?'Transfer':isI?'Income':cat.name;
+  const detail=isT?`${w.name} → ${tw?.name||'?'}`:w.name+(t.note?` · ${t.note}`:'');
+  return `<div class="txrow">
+    <div class="txicon" style="background:${ibg}">${icon}</div>
+    <div style="flex:1;min-width:0"><div class="txcat">${catName}</div><div class="txdet">${detail}</div></div>
+    <div class="txamt"><div class="a ${col}">${sign}${fmt(t.amount,t.currency)}</div><div class="d">${t.date||''}</div></div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+// RENDER: WALLETS
+// ══════════════════════════════════════════
+function renderWallets(){
+  const el=document.getElementById('walletList');
+  if(!D.wallets.length){el.innerHTML='<div class="empty"><div class="empty-i">💼</div><div class="empty-t">No wallets. Add one!</div></div>';return}
+  el.innerHTML=D.wallets.map(w=>`
+    <div class="wrow">
+      <div class="wicon">${w.icon||'💳'}</div>
+      <div style="flex:1"><div class="wname">${w.name}</div><div class="wcur">${w.currency}</div></div>
+      <div class="wamt">${fmt(w.balance,w.currency)}</div>
+      <div class="wedit" onclick="openEditWallet('${w.id}')">✏️</div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// RENDER: ANALYTICS
+// ══════════════════════════════════════════
+function renderAnalytics(){
+  document.getElementById('mLabel').textContent=mlabel(analyticsYM);
+  const txs=D.transactions.filter(t=>t.type==='spend'&&t.date&&t.date.startsWith(analyticsYM));
+  const dispC=cView==='PKR'?'PKR':'RMB';
+
+  // Group by category
+  const bycat={};
+  txs.forEach(t=>{
+    const a=cView==='PKR'?toPKR(t.amount,t.currency):toRMB(t.amount,t.currency);
+    bycat[t.category]=(bycat[t.category]||0)+a;
+  });
+  const total=Object.values(bycat).reduce((s,v)=>s+v,0);
+  document.getElementById('chartTotal').textContent=fmt(total,dispC);
+
+  // Food delivery nudge
+  const fd=bycat['food_delivery']||0;
+  if(fd>0&&total>0){
+    const debtRMB=D.debts.reduce((s,d)=>s+toRMB(Math.max(0,d.amount-(d.paid||0)),d.currency),0);
+    const fdRMB=cView==='PKR'?fd/D.rate.v:fd;
+    const pct=debtRMB>0?((fdRMB/debtRMB)*100).toFixed(1):0;
+    document.getElementById('nudgeBanner').style.display='block';
+    document.getElementById('nudgeText').textContent=`You spent ${fmt(fd,dispC)} on food delivery this month. That's ${pct}% of your total outstanding debt.`;
+  }else{
+    document.getElementById('nudgeBanner').style.display='none';
+  }
+
+  // Donut chart
+  const svg=document.getElementById('donut');
+  const leg=document.getElementById('legend');
+  if(total===0){
+    svg.innerHTML='<circle cx="80" cy="80" r="60" fill="none" stroke="var(--border2)" stroke-width="22"/><text x="80" y="85" text-anchor="middle" fill="var(--muted)" font-size="11" font-family="-apple-system,system-ui">No data</text>';
+    leg.innerHTML='';
+  }else{
+    const sorted=Object.entries(bycat).sort((a,b)=>b[1]-a[1]);
+    let paths='',legH='',angle=-Math.PI/2;
+    const cx=80,cy=80,R=72,ir=50,gap=.04;
+    sorted.forEach(([cid,val],i)=>{
+      const cat=D.categories.find(c=>c.id===cid)||{name:cid,icon:'❓',color:CAT_COLORS[i%CAT_COLORS.length]};
+      const col=cat.color||CAT_COLORS[i%CAT_COLORS.length];
+      const pct=val/total,a=pct*2*Math.PI;
+      const sa=angle+gap/2,ea=angle+a-gap/2;
+      const [x1,y1]=[cx+R*Math.cos(sa),cy+R*Math.sin(sa)];
+      const [x2,y2]=[cx+R*Math.cos(ea),cy+R*Math.sin(ea)];
+      const [xi1,yi1]=[cx+ir*Math.cos(sa),cy+ir*Math.sin(sa)];
+      const [xi2,yi2]=[cx+ir*Math.cos(ea),cy+ir*Math.sin(ea)];
+      const lg=a>Math.PI?1:0;
+      paths+=`<path d="M${x1} ${y1} A${R} ${R} 0 ${lg} 1 ${x2} ${y2} L${xi2} ${yi2} A${ir} ${ir} 0 ${lg} 0 ${xi1} ${yi1}Z" fill="${col}"/>`;
+      legH+=`<div class="legend-item"><div class="legend-dot" style="background:${col}"></div><div class="legend-label">${cat.icon} ${cat.name}</div><div class="legend-val">${Math.round(pct*100)}%</div></div>`;
+      angle+=a;
+    });
+    svg.innerHTML=paths;
+    leg.innerHTML=legH;
+  }
+
+  // All txs this month
+  const all=[...D.transactions].filter(t=>t.date&&t.date.startsWith(analyticsYM)).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const el=document.getElementById('analyticsTx');
+  el.innerHTML=all.length?all.map(txHtml).join(''):'<div class="empty"><div class="empty-i">📊</div><div class="empty-t">No transactions this month</div></div>';
+}
+
+function prevMon(){const d=new Date(analyticsYM+'-01');d.setMonth(d.getMonth()-1);analyticsYM=ym(d);renderAnalytics()}
+function nextMon(){const d=new Date(analyticsYM+'-01');d.setMonth(d.getMonth()+1);analyticsYM=ym(d);renderAnalytics()}
+
+// ══════════════════════════════════════════
+// RENDER: DEBTS
+// ══════════════════════════════════════════
+function renderDebts(){
+  const el=document.getElementById('debtList');
+  const sb=document.getElementById('debtSummaryBox');
+  if(!D.debts.length){el.innerHTML='<div class="empty"><div class="empty-i">🎉</div><div class="empty-t">No debts logged!</div></div>';sb.style.display='none';return}
+
+  const debtRMB=D.debts.reduce((s,d)=>s+toRMB(Math.max(0,d.amount-(d.paid||0)),d.currency),0);
+  sb.style.display='block';
+  document.getElementById('debtSumAmt').textContent=cView==='PKR'?fmt(debtRMB*D.rate.v,'PKR'):fmt(debtRMB,'RMB');
+
+  el.innerHTML=D.debts.map(d=>{
+    const rem=Math.max(0,d.amount-(d.paid||0));
+    const pct=d.amount>0?Math.min(100,((d.paid||0)/d.amount)*100):0;
+    const done=rem<=0;
+    return `<div class="dcard">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div class="dname">${d.person}</div>${d.note?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${d.note}</div>`:''}</div>
+        <div style="text-align:right">
+          <div class="damt">${done?'✅ Paid!':fmt(rem,d.currency)}</div>
+          ${d.paid>0?`<div style="font-size:11px;color:var(--muted)">Paid: ${fmt(d.paid,d.currency)}</div>`:''}
+        </div>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${pct}%"></div></div>
+      <div style="font-size:10px;color:var(--muted);text-align:right">${pct.toFixed(0)}% repaid</div>
+      <div class="dactions">
+        ${!done?`<button class="dab pay" onclick="openPay('${d.id}')">💰 Pay</button>`:''}
+        <button class="dab" onclick="openAddDebt('${d.id}')">✏️ Edit</button>
+        <button class="dab del" onclick="delDebt('${d.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════
+function open(id){document.getElementById(id).classList.add('open')}
+function close(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+// ADD TRANSACTION
+function openAddTx(){
+  setTab('spend',document.querySelector('#m-tx .tab'));
+  ['s-amt','i-amt','t-amt','s-note','i-src','t-note'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  document.getElementById('s-date').value=today();
+  document.getElementById('i-date').value=today();
+  document.getElementById('t-date').value=today();
+  selW={};selCat=null;
+  refreshWChips('spend');refreshWChips('income');refreshTransferSels();
+  renderCats();
+  open('m-tx');
+}
+
+function setTab(tab,btn){
+  txTab=tab;
+  ['spend','income','transfer'].forEach(t=>{
+    document.getElementById('tp-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#m-tx .tab').forEach((b,i)=>{
+    b.classList.toggle('active',['spend','income','transfer'][i]===tab);
+  });
+  if(tab==='transfer')refreshTransferSels();
+}
+
+function refreshWChips(type){
+  const cur=document.getElementById(type==='spend'?'s-cur':'i-cur').value;
+  const el=document.getElementById(type==='spend'?'s-wals':'i-wals');
+  const ws=D.wallets.filter(w=>w.currency===cur);
+  el.innerHTML=ws.length?ws.map(w=>`<div class="wchip ${selW[type]===w.id?'sel':''}" onclick="selWallet('${type}','${w.id}',this)"><div class="wn">${w.icon||'💳'} ${w.name}</div><div class="wb">${fmt(w.balance,w.currency)}</div></div>`).join(''):`<div style="font-size:12px;color:var(--muted);padding:8px">No ${cur} wallets. Add one in Wallets.</div>`;
+}
+
+function selWallet(type,id,el){
+  selW[type]=id;
+  el.closest('.wgrid').querySelectorAll('.wchip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function renderCats(){
+  document.getElementById('s-cats').innerHTML=D.categories.map(c=>`<div class="citem ${selCat===c.id?'sel':''}" onclick="selCategory('${c.id}',this)"><div class="ce">${c.icon}</div><div class="cn">${c.name}</div></div>`).join('');
+}
+
+function selCategory(id,el){
+  selCat=id;
+  el.closest('.cgrid').querySelectorAll('.citem').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function refreshTransferSels(){
+  const fromEl=document.getElementById('t-from'),toEl=document.getElementById('t-to');
+  const opts=D.wallets.map(w=>`<option value="${w.id}">${w.icon||''} ${w.name} (${fmt(w.balance,w.currency)})</option>`).join('');
+  fromEl.innerHTML=toEl.innerHTML=opts;
+  if(D.wallets.length>1)toEl.selectedIndex=1;
+  updateTransferNote();
+}
+
+function updateTransferNote(){
+  const fId=document.getElementById('t-from')?.value;
+  const tId=document.getElementById('t-to')?.value;
+  const fw=D.wallets.find(w=>w.id===fId),tw=D.wallets.find(w=>w.id===tId);
+  const el=document.getElementById('t-rate-note');
+  if(fw&&tw&&fw.currency!==tw.currency){
+    el.style.display='block';
+    const cross=fw.currency==='RMB'?`1 RMB = ${D.rate.v.toFixed(2)} PKR`:`1 PKR = ${(1/D.rate.v).toFixed(4)} RMB`;
+    el.textContent=`⚠️ Cross-currency transfer: ${cross}. Amount will be auto-converted.`;
+  }else{
+    el.style.display='none';
+  }
+}
+// listen for from/to changes
+document.getElementById('t-from').addEventListener('change',updateTransferNote);
+document.getElementById('t-to').addEventListener('change',updateTransferNote);
+
+// SAVE TRANSACTIONS
+function saveSpend(){
+  const amt=parseFloat(document.getElementById('s-amt').value);
+  const cur=document.getElementById('s-cur').value;
+  const wid=selW['spend'];
+  const date=document.getElementById('s-date').value||today();
+  const note=document.getElementById('s-note').value.trim();
+  if(!amt||amt<=0)return alert('Enter a valid amount');
+  if(!wid)return alert('Select a wallet');
+  if(!selCat)return alert('Select a category');
+  const w=D.wallets.find(x=>x.id===wid);
+  if(!w)return;
+  w.balance=Math.max(0,w.balance-amt);
+  D.transactions.push({id:uid(),type:'spend',amount:amt,currency:cur,walletId:wid,category:selCat,note,date});
+  save();close('m-tx');render(currentS);
+}
+
+function saveIncome(){
+  const amt=parseFloat(document.getElementById('i-amt').value);
+  const cur=document.getElementById('i-cur').value;
+  const wid=selW['income'];
+  const date=document.getElementById('i-date').value||today();
+  const src=document.getElementById('i-src').value.trim();
+  if(!amt||amt<=0)return alert('Enter a valid amount');
+  if(!wid)return alert('Select a wallet');
+  const w=D.wallets.find(x=>x.id===wid);
+  if(!w)return;
+  w.balance+=amt;
+  D.transactions.push({id:uid(),type:'income',amount:amt,currency:cur,walletId:wid,category:'income',note:src,date});
+  save();close('m-tx');render(currentS);
+}
+
+function saveTransfer(){
+  const amt=parseFloat(document.getElementById('t-amt').value);
+  const fId=document.getElementById('t-from').value;
+  const tId=document.getElementById('t-to').value;
+  const date=document.getElementById('t-date').value||today();
+  const note=document.getElementById('t-note').value.trim();
+  if(!amt||amt<=0)return alert('Enter a valid amount');
+  if(fId===tId)return alert('From and To must be different wallets');
+  const fw=D.wallets.find(w=>w.id===fId),tw=D.wallets.find(w=>w.id===tId);
+  if(!fw||!tw)return;
+  let toAmt=amt;
+  if(fw.currency!==tw.currency){
+    toAmt=fw.currency==='RMB'?amt*D.rate.v:amt/D.rate.v;
+  }
+  fw.balance=Math.max(0,fw.balance-amt);
+  tw.balance+=toAmt;
+  D.transactions.push({id:uid(),type:'transfer',amount:amt,currency:fw.currency,walletId:fId,toWalletId:tId,note,date});
+  save();close('m-tx');render(currentS);
+}
+
+// WALLET MODAL
+function openAddWallet(){
+  document.getElementById('wModalTitle').textContent='Add Wallet';
+  document.getElementById('w-name').value='';
+  document.getElementById('w-cur').value='RMB';
+  document.getElementById('w-bal').value='';
+  document.getElementById('w-icon').value='💳';
+  document.getElementById('w-id').value='';
+  document.getElementById('w-del').style.display='none';
+  open('m-wallet');
+}
+
+function openEditWallet(id){
+  const w=D.wallets.find(x=>x.id===id);if(!w)return;
+  document.getElementById('wModalTitle').textContent='Edit Wallet';
+  document.getElementById('w-name').value=w.name;
+  document.getElementById('w-cur').value=w.currency;
+  document.getElementById('w-bal').value=w.balance;
+  document.getElementById('w-icon').value=w.icon||'💳';
+  document.getElementById('w-id').value=id;
+  document.getElementById('w-del').style.display='block';
+  open('m-wallet');
+}
+
+function saveWallet(){
+  const id=document.getElementById('w-id').value;
+  const name=document.getElementById('w-name').value.trim();
+  const currency=document.getElementById('w-cur').value;
+  const balance=parseFloat(document.getElementById('w-bal').value)||0;
+  const icon=document.getElementById('w-icon').value||'💳';
+  if(!name)return alert('Enter wallet name');
+  if(id){const w=D.wallets.find(x=>x.id===id);if(w){w.name=name;w.currency=currency;w.balance=balance;w.icon=icon}}
+  else D.wallets.push({id:uid(),name,currency,balance,icon});
+  save();close('m-wallet');renderWallets();
+}
+
+function deleteWallet(){
+  const id=document.getElementById('w-id').value;
+  if(!confirm('Delete this wallet?'))return;
+  D.wallets=D.wallets.filter(w=>w.id!==id);
+  save();close('m-wallet');renderWallets();
+}
+
+function openTransferDirect(){
+  openAddTx();
+  setTimeout(()=>setTab('transfer',null),50);
+}
+
+// DEBT MODAL
+function openAddDebt(id){
+  document.getElementById('dModalTitle').textContent=id?'Edit Debt':'Add Debt';
+  document.getElementById('d-id').value=id||'';
+  document.getElementById('d-del').style.display=id?'block':'none';
+  if(id){
+    const d=D.debts.find(x=>x.id===id);
+    if(d){
+      document.getElementById('d-person').value=d.person;
+      document.getElementById('d-cur').value=d.currency;
+      document.getElementById('d-amt').value=d.amount;
+      document.getElementById('d-paid').value=d.paid||0;
+      document.getElementById('d-note').value=d.note||'';
+    }
+  }else{
+    ['d-person','d-note'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('d-cur').value='RMB';
+    document.getElementById('d-amt').value='';
+    document.getElementById('d-paid').value='0';
+  }
+  open('m-debt');
+}
+
+function saveDebt(){
+  const id=document.getElementById('d-id').value;
+  const person=document.getElementById('d-person').value.trim();
+  const currency=document.getElementById('d-cur').value;
+  const amount=parseFloat(document.getElementById('d-amt').value);
+  const paid=parseFloat(document.getElementById('d-paid').value)||0;
+  const note=document.getElementById('d-note').value.trim();
+  if(!person)return alert('Enter person name');
+  if(!amount||amount<=0)return alert('Enter valid amount');
+  if(id){const d=D.debts.find(x=>x.id===id);if(d){d.person=person;d.currency=currency;d.amount=amount;d.paid=paid;d.note=note}}
+  else D.debts.push({id:uid(),person,currency,amount,paid:0,note});
+  save();close('m-debt');renderDebts();
+}
+
+function deleteDebt(){
+  const id=document.getElementById('d-id').value;
+  if(!confirm('Delete this debt?'))return;
+  D.debts=D.debts.filter(d=>d.id!==id);
+  save();close('m-debt');renderDebts();
+}
+
+function delDebt(id){
+  if(!confirm('Delete this debt?'))return;
+  D.debts=D.debts.filter(d=>d.id!==id);
+  save();renderDebts();
+}
+
+// PAY MODAL
+function openPay(id){
+  const d=D.debts.find(x=>x.id===id);if(!d)return;
+  const rem=Math.max(0,d.amount-(d.paid||0));
+  document.getElementById('pay-id').value=id;
+  document.getElementById('pay-to').textContent='Paying: '+d.person;
+  document.getElementById('pay-rem').textContent='Remaining: '+fmt(rem,d.currency);
+  document.getElementById('pay-amt').value='';
+  open('m-pay');
+}
+
+function savePay(){
+  const id=document.getElementById('pay-id').value;
+  const amt=parseFloat(document.getElementById('pay-amt').value);
+  if(!amt||amt<=0)return alert('Enter amount paid');
+  const d=D.debts.find(x=>x.id===id);if(!d)return;
+  d.paid=Math.min(d.amount,(d.paid||0)+amt);
+  save();close('m-pay');renderDebts();
+}
+
+// CATEGORY MODAL
+function openAddCat(){
+  document.getElementById('c-name').value='';
+  document.getElementById('c-icon').value='';
+  open('m-cat');
+}
+
+function saveCat(){
+  const name=document.getElementById('c-name').value.trim();
+  const icon=document.getElementById('c-icon').value||'🔖';
+  if(!name)return alert('Enter category name');
+  D.categories.push({id:uid(),name,icon,color:CAT_COLORS[D.categories.length%CAT_COLORS.length]});
+  save();close('m-cat');renderCats();
+}
+
+// EXPORT
+function exportData(){
+  const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`hisaab-${today()}.json`;
+  a.click();
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+function init(){
+  load();
+  cView=D.settings.cv||'RMB';
+  analyticsYM=ym(new Date());
+  renderRateBar();
+  fetchRate();
+  renderHome();
+  // Set pill state
+  ['RMB','PKR','native'].forEach(v=>{
+    const el=document.getElementById('pill-'+v);
+    if(el)el.classList.toggle('active',v===cView);
+  });
+}
+init();
+</script>
+</body>
+</html>

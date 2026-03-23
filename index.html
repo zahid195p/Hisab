@@ -34,6 +34,25 @@
     --blue:#2563eb; --blue-bg:rgba(37,99,235,0.1);
   }
 }
+/* Manual theme overrides — override system preference */
+html.theme-dark{
+  --bg:#0c0c15; --surface:#131320; --card:#1a1a2e; --card2:#20203a;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+  --text:#eeeef8; --muted:#7070a0; --faint:#252540;
+  --amber:#f5a623; --amber-bg:rgba(245,166,35,0.13);
+  --green:#34d399; --green-bg:rgba(52,211,153,0.13);
+  --red:#f87171; --red-bg:rgba(248,113,113,0.13);
+  --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.13);
+}
+html.theme-light{
+  --bg:#f2f1ed; --surface:#e8e7e1; --card:#fff; --card2:#f8f7f2;
+  --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.12);
+  --text:#18182c; --muted:#6868a0; --faint:#e0dfd6;
+  --amber:#c47f0d; --amber-bg:rgba(196,127,13,0.1);
+  --green:#059669; --green-bg:rgba(5,150,105,0.1);
+  --red:#dc2626; --red-bg:rgba(220,38,38,0.1);
+  --blue:#2563eb; --blue-bg:rgba(37,99,235,0.1);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;-webkit-text-size-adjust:100%}
 body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;overflow:hidden}
@@ -194,17 +213,44 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       <div class="title">Hisaab</div>
     </div>
     <div class="spacer"></div>
-    <button class="btn-sm" onclick="exportData()">💾 Backup</button>
+    <button class="btn-sm" id="themeBtn" onclick="toggleTheme()" style="font-size:16px;padding:7px 10px">🌙</button>
+    <button class="btn-sm" onclick="exportData()" style="margin-left:6px">💾</button>
+    <button class="btn-sm" onclick="importData()" style="margin-left:6px">📂</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
   </div>
 
   <div class="nw-card" id="nwCard">
-    <div class="nw-label">Net Worth</div>
-    <div class="nw-amt mono" id="nwAmt">—</div>
-    <div class="nw-sub" id="nwSub">—</div>
-    <div class="nw-pills">
-      <button class="pill active" id="pill-RMB" onclick="setCView('RMB')">¥ RMB</button>
-      <button class="pill" id="pill-PKR" onclick="setCView('PKR')">₨ PKR</button>
-      <button class="pill" id="pill-native" onclick="setCView('native')">Native</button>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div class="nw-label" style="margin-bottom:0">Financial Snapshot</div>
+      <div class="nw-pills" style="margin-top:0">
+        <button class="pill active" id="pill-RMB" onclick="setCView('RMB')">¥ RMB</button>
+        <button class="pill" id="pill-PKR" onclick="setCView('PKR')">₨ PKR</button>
+        <button class="pill" id="pill-native" onclick="setCView('native')">Split</button>
+      </div>
+    </div>
+
+    <!-- Row 1: In hand -->
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">💰 In hand</span>
+      <span class="mono" id="nwAssets" style="font-size:22px;font-weight:800;color:var(--text)">—</span>
+    </div>
+
+    <!-- Row 2: You owe -->
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">💸 You owe</span>
+      <span class="mono" id="nwDebt" style="font-size:22px;font-weight:800;color:var(--red)">—</span>
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px"></div>
+
+    <!-- Row 3: Net -->
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">📊 Net</span>
+      <div style="text-align:right">
+        <div class="mono" id="nwAmt" style="font-size:28px;font-weight:800;letter-spacing:-1px">—</div>
+        <div id="nwSub" style="font-size:10px;color:var(--muted);margin-top:2px">—</div>
+      </div>
     </div>
   </div>
 
@@ -223,10 +269,15 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     </div>
   </div>
 
+  <div class="px" style="margin-bottom:14px" id="monthNet"></div>
+
   <div class="px" style="margin-bottom:14px" id="stipendTimeline"></div>
 
-  <div class="px"><div class="section-label">Recent</div></div>
-  <div class="px"><div class="card" id="recentList"><div class="empty"><div class="empty-i">📭</div><div class="empty-t">No transactions yet. Hit + to add one!</div></div></div></div>
+  <div class="px" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div class="section-label" style="margin-bottom:0">Recent</div>
+    <button class="btn-sm" id="seeAllBtn" onclick="toggleSeeAll()">See all</button>
+  </div>
+  <div class="px"><div class="card" id="recentList"></div></div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -254,9 +305,30 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <div class="mmonth" id="mLabel">—</div>
     <button class="mnav-btn" onclick="nextMon()">›</button>
   </div>
+
+  <!-- Month income/spend summary strip -->
+  <div class="px" style="margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div style="background:var(--green-bg);border:1px solid rgba(52,211,153,.15);border-radius:12px;padding:10px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">↑ Income</div>
+        <div class="mono" id="an-income" style="font-size:13px;font-weight:800;color:var(--green)">—</div>
+      </div>
+      <div style="background:var(--red-bg);border:1px solid rgba(248,113,113,.15);border-radius:12px;padding:10px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">↓ Spent</div>
+        <div class="mono" id="an-spent" style="font-size:13px;font-weight:800;color:var(--red)">—</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Net</div>
+        <div class="mono" id="an-net" style="font-size:13px;font-weight:800">—</div>
+      </div>
+    </div>
+  </div>
+
   <div class="px" id="nudgeBanner" style="display:none">
     <div class="nudge"><div class="nudge-t">🍔 Food Delivery Alert</div><div class="nudge-s" id="nudgeText">—</div></div>
   </div>
+
+  <!-- Spending donut -->
   <div class="px">
     <div class="section-label">Spending Breakdown</div>
     <div class="card">
@@ -267,9 +339,26 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
       <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">Total spent: <span class="mono" id="chartTotal" style="font-weight:800;color:var(--text)">—</span></div>
     </div>
   </div>
+
+  <!-- Budget limits -->
   <div class="px" style="margin-top:14px">
-    <div class="section-label">All Transactions</div>
-    <div class="card" id="analyticsTx"><div class="empty"><div class="empty-i">📊</div><div class="empty-t">No data this month</div></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-label" style="margin-bottom:0">Budget Limits</div>
+      <button class="btn-sm" onclick="openBudgetModal()">✏️ Edit</button>
+    </div>
+    <div id="budgetBars"></div>
+  </div>
+
+  <!-- All txs with filter tabs -->
+  <div class="px" style="margin-top:14px">
+    <div class="section-label">Transactions</div>
+    <div class="tabs" style="margin-bottom:10px">
+      <button class="tab active" id="atab-all"    onclick="setATab('all',this)">All</button>
+      <button class="tab"        id="atab-spend"  onclick="setATab('spend',this)">Spend</button>
+      <button class="tab"        id="atab-income" onclick="setATab('income',this)">Income</button>
+      <button class="tab"        id="atab-xfer"   onclick="setATab('transfer',this)">Transfers</button>
+    </div>
+    <div class="card" id="analyticsTx"></div>
   </div>
 </div>
 
@@ -330,18 +419,15 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <!-- SPEND -->
     <div id="tp-spend">
       <div class="fg">
-        <label class="fl">Amount</label>
-        <div class="row">
-          <select class="fi" id="s-cur" style="width:95px;flex-shrink:0" onchange="refreshWChips('spend')">
-            <option value="RMB">¥ RMB</option>
-            <option value="PKR">₨ PKR</option>
-          </select>
-          <input class="fi mono" type="number" id="s-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
-        </div>
-      </div>
-      <div class="fg">
         <label class="fl">From Wallet</label>
         <div class="wgrid" id="s-wals"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Amount</label>
+        <div class="row">
+          <div id="s-cur-label" style="width:85px;flex-shrink:0;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;font-weight:800;color:var(--muted);text-align:center">—</div>
+          <input class="fi mono" type="number" id="s-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
+        </div>
       </div>
       <div class="fg">
         <label class="fl">Category</label>
@@ -362,22 +448,25 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <!-- INCOME -->
     <div id="tp-income" style="display:none">
       <div class="fg">
-        <label class="fl">Amount</label>
-        <div class="row">
-          <select class="fi" id="i-cur" style="width:95px;flex-shrink:0" onchange="refreshWChips('income')">
-            <option value="RMB">¥ RMB</option>
-            <option value="PKR">₨ PKR</option>
-          </select>
-          <input class="fi mono" type="number" id="i-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
-        </div>
-      </div>
-      <div class="fg">
         <label class="fl">To Wallet</label>
         <div class="wgrid" id="i-wals"></div>
       </div>
       <div class="fg">
+        <label class="fl">Amount</label>
+        <div class="row">
+          <div id="i-cur-label" style="width:85px;flex-shrink:0;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;font-weight:800;color:var(--muted);text-align:center">—</div>
+          <input class="fi mono" type="number" id="i-amt" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800">
+        </div>
+      </div>
+      <div class="fg">
         <label class="fl">Source</label>
-        <input class="fi" type="text" id="i-src" placeholder="e.g. Stipend, Accommodation Allowance">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:4px">
+          <button type="button" class="src-btn" id="src-stipend" onclick="selIncSrc('stipend')" style="padding:10px 4px;border-radius:11px;border:2px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">🎓 Stipend</button>
+          <button type="button" class="src-btn" id="src-housing" onclick="selIncSrc('housing')" style="padding:10px 4px;border-radius:11px;border:2px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">🏠 Housing</button>
+          <button type="button" class="src-btn" id="src-other" onclick="selIncSrc('other')" style="padding:10px 4px;border-radius:11px;border:2px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">💰 Other</button>
+        </div>
+        <input class="fi" type="text" id="i-src" placeholder="Note (optional)" style="margin-top:6px">
+        <input type="hidden" id="i-tag" value="other">
       </div>
       <div class="fg">
         <label class="fl">Date</label>
@@ -550,6 +639,19 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL: BUDGET LIMITS
+═══════════════════════════════════════════ -->
+<div class="overlay" id="m-budget">
+  <div class="sheet">
+    <div class="handle" onclick="close('m-budget')"></div>
+    <div class="modal-title">Budget Limits</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Set monthly spending limits per category. Leave blank for no limit.</div>
+    <div id="budgetForm"></div>
+    <button class="btn btn-p" onclick="saveBudgets()">Save Limits</button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // DEFAULT DATA
@@ -618,6 +720,7 @@ function load(){
   if(!D.categories)D.categories=[...DEFAULT_CATS];
   if(!D.rate)D.rate={v:38.5,t:0};
   if(!D.settings)D.settings={cv:'RMB'};
+  if(!D.budgets)D.budgets={};
 }
 function reset(){
   D={wallets:DEFAULT_WALLETS.map(w=>({...w,id:uid()})),transactions:[],debts:[],categories:[...DEFAULT_CATS],rate:{v:38.5,t:0},settings:{cv:'RMB'}};
@@ -660,6 +763,12 @@ function toDisp(amt,cur){
 // NAVIGATION
 // ══════════════════════════════════════════
 let currentS='home';
+function renderAll(){
+  // Always re-render home stats so everything stays in sync
+  renderHome();
+  // Also re-render the current screen if it's not home
+  if(currentS!=='home') render(currentS);
+}
 function goTo(s,btn){
   document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
   document.getElementById('s-'+s).classList.add('active');
@@ -691,53 +800,86 @@ function setCView(v){
 // RENDER: HOME
 // ══════════════════════════════════════════
 function renderHome(){
+  const dispC=cView==='PKR'?'PKR':'RMB';
+  const conv=(amt,cur)=>cView==='PKR'?toPKR(amt,cur):toRMB(amt,cur);
+
   // Net worth
   let assetRMB=D.wallets.reduce((s,w)=>s+toRMB(w.balance,w.currency),0);
   let debtRMB=D.debts.reduce((s,d)=>s+toRMB(Math.max(0,d.amount-(d.paid||0)),d.currency),0);
   let netRMB=assetRMB-debtRMB;
 
-  let dispAmt, dispSub;
+  let dispAssets, dispDebt, dispAmt, dispSub;
+
   if(cView==='PKR'){
-    dispAmt=fmt(netRMB*D.rate.v,'PKR');
-    dispSub=`Assets ${fmt(assetRMB*D.rate.v,'PKR')} · Debt ${fmt(debtRMB*D.rate.v,'PKR')}`;
+    dispAssets = fmt(assetRMB*D.rate.v,'PKR');
+    dispDebt   = debtRMB>0 ? '-'+fmt(debtRMB*D.rate.v,'PKR') : fmt(0,'PKR');
+    dispAmt    = fmt(netRMB*D.rate.v,'PKR');
+    dispSub    = netRMB<0 ? 'You owe more than you have' : 'You are ahead of your debts';
   }else if(cView==='native'){
-    const rmbWals=D.wallets.filter(w=>w.currency==='RMB').reduce((s,w)=>s+w.balance,0);
-    const pkrWals=D.wallets.filter(w=>w.currency==='PKR').reduce((s,w)=>s+w.balance,0);
-    dispAmt=fmt(rmbWals,'RMB')+' + '+fmt(pkrWals,'PKR');
-    dispSub='Minus debt: '+fmt(debtRMB,'RMB')+' equiv.';
+    const rmbAssets=D.wallets.filter(w=>w.currency==='RMB').reduce((s,w)=>s+w.balance,0);
+    const pkrAssets=D.wallets.filter(w=>w.currency==='PKR').reduce((s,w)=>s+w.balance,0);
+    const rmbDebt=D.debts.filter(d=>d.currency==='RMB').reduce((s,d)=>s+Math.max(0,d.amount-(d.paid||0)),0);
+    const pkrDebt=D.debts.filter(d=>d.currency==='PKR').reduce((s,d)=>s+Math.max(0,d.amount-(d.paid||0)),0);
+    dispAssets = fmt(rmbAssets,'RMB')+' + '+fmt(pkrAssets,'PKR');
+    dispDebt   = (rmbDebt>0||pkrDebt>0) ? '-'+fmt(rmbDebt,'RMB')+' / -'+fmt(pkrDebt,'PKR') : '—';
+    dispAmt    = fmt(rmbAssets-rmbDebt,'RMB')+' / '+fmt(pkrAssets-pkrDebt,'PKR');
+    dispSub    = 'RMB net / PKR net';
   }else{
-    dispAmt=fmt(netRMB,'RMB');
-    dispSub=`Assets ${fmt(assetRMB,'RMB')} · Debt ${fmt(debtRMB,'RMB')}`;
+    dispAssets = fmt(assetRMB,'RMB');
+    dispDebt   = debtRMB>0 ? '-'+fmt(debtRMB,'RMB') : fmt(0,'RMB');
+    dispAmt    = fmt(netRMB,'RMB');
+    dispSub    = netRMB<0 ? 'You owe more than you have' : 'You are ahead of your debts';
   }
+
+  document.getElementById('nwAssets').textContent = dispAssets;
+  document.getElementById('nwDebt').textContent   = dispDebt;
+  document.getElementById('nwDebt').style.color   = debtRMB>0 ? 'var(--red)' : 'var(--muted)';
 
   const nwEl=document.getElementById('nwAmt');
   nwEl.textContent=dispAmt;
-  nwEl.style.color=netRMB<0?'var(--red)':'var(--text)';
+  nwEl.style.color=netRMB<0?'var(--red)':'var(--green)';
   document.getElementById('nwSub').textContent=dispSub;
 
-  // This month spend
+  // This month stats
   const thisYM=ym(new Date());
-  const mSpend=D.transactions.filter(t=>t.type==='spend'&&t.date&&t.date.startsWith(thisYM)).reduce((s,t)=>{
-    const d=toDisp(t.amount,t.currency);return s+d.a;
-  },0);
-  const dispC=cView==='PKR'?'PKR':'RMB';
-  document.getElementById('statMonth').textContent=fmt(mSpend,dispC);
+  const mTxs=D.transactions.filter(t=>t.date&&t.date.startsWith(thisYM));
 
-  // Debt
-  document.getElementById('statDebt').textContent=fmt(cView==='PKR'?debtRMB*D.rate.v:debtRMB,dispC);
+  const mSpend=mTxs.filter(t=>t.type==='spend').reduce((s,t)=>s+conv(t.amount,t.currency),0);
+  const mIncome=mTxs.filter(t=>t.type==='income').reduce((s,t)=>s+conv(t.amount,t.currency),0);
+  const mNet=mIncome-mSpend;
+
+  document.getElementById('statMonth').textContent=fmt(mSpend,dispC==='PKR'?'PKR':'RMB');
+  document.getElementById('statDebt').textContent=fmt(cView==='PKR'?debtRMB*D.rate.v:debtRMB,dispC==='PKR'?'PKR':'RMB');
   document.getElementById('statDebt').style.color=debtRMB>0?'var(--red)':'var(--green)';
+  document.getElementById('statIncome').textContent=fmt(mIncome,dispC==='PKR'?'PKR':'RMB');
 
-  // Income this month
-  const mIncome=D.transactions.filter(t=>t.type==='income'&&t.date&&t.date.startsWith(thisYM)).reduce((s,t)=>{
-    return s+(cView==='PKR'?toPKR(t.amount,t.currency):toRMB(t.amount,t.currency));
-  },0);
-  document.getElementById('statIncome').textContent=fmt(mIncome,dispC);
+  // Monthly net summary bar
+  const mnEl=document.getElementById('monthNet');
+  if(mnEl&&(mIncome>0||mSpend>0)){
+    const maxVal=Math.max(mIncome,mSpend)||1;
+    const incW=Math.round((mIncome/maxVal)*100);
+    const spdW=Math.round((mSpend/maxVal)*100);
+    const netCol=mNet>=0?'var(--green)':'var(--red)';
+    const cur2=dispC==='PKR'?'PKR':'RMB';
+    mnEl.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">${new Date().toLocaleString('en',{month:'long'})} Summary</span>
+        <span class="mono" style="font-size:12px;font-weight:800;color:${netCol}">${mNet>=0?'+':''}${fmt(mNet,cur2)} net</span>
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--green)">↑ In</span><span class="mono" style="font-weight:700">${fmt(mIncome,cur2)}</span></div>
+        <div style="height:6px;background:var(--faint);border-radius:3px;overflow:hidden"><div style="height:100%;width:${incW}%;background:var(--green);border-radius:3px"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--red)">↓ Out</span><span class="mono" style="font-weight:700">${fmt(mSpend,cur2)}</span></div>
+        <div style="height:6px;background:var(--faint);border-radius:3px;overflow:hidden"><div style="height:100%;width:${spdW}%;background:var(--red);border-radius:3px"></div></div>
+      </div>
+    </div>`;
+  } else if(mnEl){
+    mnEl.innerHTML='';
+  }
 
-  // Recent txs
-  const recent=[...D.transactions].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).slice(0,8);
-  const el=document.getElementById('recentList');
-  el.innerHTML=recent.length?recent.map(txHtml).join(''):'<div class="empty"><div class="empty-i">📭</div><div class="empty-t">No transactions yet. Hit + to add one!</div></div>';
-
+  renderRecentList();
   renderStipendTimeline();
 }
 
@@ -752,12 +894,20 @@ function txHtml(t){
   const icon=isT?'⇄':cat.icon;
   const catName=isT?'Transfer':isI?'Income':cat.name;
   const detail=isT?`${w.name} → ${tw?.name||'?'}`:w.name+(t.note?` · ${t.note}`:'');
-  const editable=!isT; // transfers are complex, skip edit for now
-  return `<div class="txrow" ${editable?`onclick="openEditTx('${t.id}')" style="cursor:pointer"`:''}">
+  if(isT){
+    // Transfers: show delete button, no edit sheet
+    return `<div class="txrow">
+      <div class="txicon" style="background:${ibg}">${icon}</div>
+      <div style="flex:1;min-width:0"><div class="txcat">${catName}</div><div class="txdet">${detail}</div></div>
+      <div class="txamt"><div class="a ${col}">${fmt(t.amount,t.currency)}</div><div class="d">${t.date||''}</div></div>
+      <div onclick="deleteTransfer('${t.id}')" style="font-size:14px;color:var(--muted);margin-left:8px;padding:4px 6px;cursor:pointer;border-radius:6px;background:var(--faint)">🗑️</div>
+    </div>`;
+  }
+  return `<div class="txrow" onclick="openEditTx('${t.id}')" style="cursor:pointer">
     <div class="txicon" style="background:${ibg}">${icon}</div>
     <div style="flex:1;min-width:0"><div class="txcat">${catName}</div><div class="txdet">${detail}</div></div>
     <div class="txamt"><div class="a ${col}">${sign}${fmt(t.amount,t.currency)}</div><div class="d">${t.date||''}</div></div>
-    ${editable?`<div style="font-size:11px;color:var(--muted);margin-left:6px;opacity:.5">›</div>`:''}
+    <div style="font-size:11px;color:var(--muted);margin-left:6px;opacity:.5">›</div>
   </div>`;
 }
 
@@ -779,28 +929,44 @@ function renderWallets(){
 // ══════════════════════════════════════════
 // RENDER: ANALYTICS
 // ══════════════════════════════════════════
+let aTab='all';
+function setATab(t,btn){
+  aTab=t;
+  document.querySelectorAll('#s-analytics .tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderAnalyticsTxList();
+}
+
 function renderAnalytics(){
   document.getElementById('mLabel').textContent=mlabel(analyticsYM);
-  const txs=D.transactions.filter(t=>t.type==='spend'&&t.date&&t.date.startsWith(analyticsYM));
+  const conv=(amt,cur)=>cView==='PKR'?toPKR(amt,cur):toRMB(amt,cur);
   const dispC=cView==='PKR'?'PKR':'RMB';
+  const allMon=D.transactions.filter(t=>t.date&&t.date.startsWith(analyticsYM));
+  const spendTxs=allMon.filter(t=>t.type==='spend');
+  const incomeTxs=allMon.filter(t=>t.type==='income');
 
-  // Group by category
-  const bycat={};
-  txs.forEach(t=>{
-    const a=cView==='PKR'?toPKR(t.amount,t.currency):toRMB(t.amount,t.currency);
-    bycat[t.category]=(bycat[t.category]||0)+a;
-  });
-  const total=Object.values(bycat).reduce((s,v)=>s+v,0);
-  document.getElementById('chartTotal').textContent=fmt(total,dispC);
+  // Summary strip
+  const totalIncome=incomeTxs.reduce((s,t)=>s+conv(t.amount,t.currency),0);
+  const totalSpend=spendTxs.reduce((s,t)=>s+conv(t.amount,t.currency),0);
+  const netMon=totalIncome-totalSpend;
+  document.getElementById('an-income').textContent=fmt(totalIncome,dispC);
+  document.getElementById('an-spent').textContent=fmt(totalSpend,dispC);
+  const netEl=document.getElementById('an-net');
+  netEl.textContent=(netMon>=0?'+':'')+fmt(Math.abs(netMon),dispC);
+  netEl.style.color=netMon>=0?'var(--green)':'var(--red)';
 
   // Food delivery nudge
+  const bycat={};
+  spendTxs.forEach(t=>{bycat[t.category]=(bycat[t.category]||0)+conv(t.amount,t.currency);});
+  const total=Object.values(bycat).reduce((s,v)=>s+v,0);
+  document.getElementById('chartTotal').textContent=fmt(total,dispC);
   const fd=bycat['food_delivery']||0;
   if(fd>0&&total>0){
     const debtRMB=D.debts.reduce((s,d)=>s+toRMB(Math.max(0,d.amount-(d.paid||0)),d.currency),0);
     const fdRMB=cView==='PKR'?fd/D.rate.v:fd;
     const pct=debtRMB>0?((fdRMB/debtRMB)*100).toFixed(1):0;
     document.getElementById('nudgeBanner').style.display='block';
-    document.getElementById('nudgeText').textContent=`You spent ${fmt(fd,dispC)} on food delivery this month. That's ${pct}% of your total outstanding debt.`;
+    document.getElementById('nudgeText').textContent=`You spent ${fmt(fd,dispC)} on food delivery this month — that's ${pct}% of your total outstanding debt.`;
   }else{
     document.getElementById('nudgeBanner').style.display='none';
   }
@@ -810,7 +976,7 @@ function renderAnalytics(){
   const leg=document.getElementById('legend');
   if(total===0){
     svg.innerHTML='<circle cx="80" cy="80" r="60" fill="none" stroke="var(--border2)" stroke-width="22"/><text x="80" y="85" text-anchor="middle" fill="var(--muted)" font-size="11" font-family="-apple-system,system-ui">No data</text>';
-    leg.innerHTML='';
+    leg.innerHTML='<div style="font-size:11px;color:var(--muted)">No spending this month</div>';
   }else{
     const sorted=Object.entries(bycat).sort((a,b)=>b[1]-a[1]);
     let paths='',legH='',angle=-Math.PI/2;
@@ -833,10 +999,19 @@ function renderAnalytics(){
     leg.innerHTML=legH;
   }
 
-  // All txs this month
-  const all=[...D.transactions].filter(t=>t.date&&t.date.startsWith(analyticsYM)).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  // Budget bars (only for current month)
+  renderBudgetBars(bycat,dispC);
+
+  renderAnalyticsTxList();
+}
+
+function renderAnalyticsTxList(){
+  const all=[...D.transactions]
+    .filter(t=>t.date&&t.date.startsWith(analyticsYM))
+    .filter(t=>aTab==='all'||t.type===aTab)
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
   const el=document.getElementById('analyticsTx');
-  el.innerHTML=all.length?all.map(txHtml).join(''):'<div class="empty"><div class="empty-i">📊</div><div class="empty-t">No transactions this month</div></div>';
+  el.innerHTML=all.length?all.map(txHtml).join(''):'<div class="empty"><div class="empty-i">📊</div><div class="empty-t">No transactions here</div></div>';
 }
 
 function prevMon(){const d=new Date(analyticsYM+'-01');d.setMonth(d.getMonth()-1);analyticsYM=ym(d);renderAnalytics()}
@@ -894,6 +1069,7 @@ function openAddTx(){
   selW={};selCat=null;
   refreshWChips('spend');refreshWChips('income');refreshTransferSels();
   renderCats();
+  selIncSrc('other');
   open('m-tx');
 }
 
@@ -909,16 +1085,27 @@ function setTab(tab,btn){
 }
 
 function refreshWChips(type){
-  const cur=document.getElementById(type==='spend'?'s-cur':'i-cur').value;
   const el=document.getElementById(type==='spend'?'s-wals':'i-wals');
-  const ws=D.wallets.filter(w=>w.currency===cur);
-  el.innerHTML=ws.length?ws.map(w=>`<div class="wchip ${selW[type]===w.id?'sel':''}" onclick="selWallet('${type}','${w.id}',this)"><div class="wn">${w.icon||'💳'} ${w.name}</div><div class="wb">${fmt(w.balance,w.currency)}</div></div>`).join(''):`<div style="font-size:12px;color:var(--muted);padding:8px">No ${cur} wallets. Add one in Wallets.</div>`;
+  el.innerHTML=D.wallets.length
+    ?D.wallets.map(w=>`<div class="wchip ${selW[type]===w.id?'sel':''}" onclick="selWallet('${type}','${w.id}',this)">
+        <div class="wn">${w.icon||'💳'} ${w.name}</div>
+        <div class="wb">${fmt(w.balance,w.currency)}</div>
+      </div>`).join('')
+    :'<div style="font-size:12px;color:var(--muted);padding:8px">No wallets. Add one in Wallets.</div>';
 }
 
 function selWallet(type,id,el){
   selW[type]=id;
   el.closest('.wgrid').querySelectorAll('.wchip').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
+  // Auto-update currency label from wallet
+  const w=D.wallets.find(x=>x.id===id);
+  if(w){
+    const sym=w.currency==='RMB'?'¥ RMB':'₨ PKR';
+    const labelId=type==='spend'?'s-cur-label':'i-cur-label';
+    const lbl=document.getElementById(labelId);
+    if(lbl){lbl.textContent=sym;lbl.style.color='var(--amber)';lbl.style.borderColor='var(--amber)';}
+  }
 }
 
 function renderCats(){
@@ -959,33 +1146,46 @@ document.getElementById('t-to').addEventListener('change',updateTransferNote);
 // SAVE TRANSACTIONS
 function saveSpend(){
   const amt=parseFloat(document.getElementById('s-amt').value);
-  const cur=document.getElementById('s-cur').value;
   const wid=selW['spend'];
   const date=document.getElementById('s-date').value||today();
   const note=document.getElementById('s-note').value.trim();
   if(!amt||amt<=0)return alert('Enter a valid amount');
-  if(!wid)return alert('Select a wallet');
+  if(!wid)return alert('Select a wallet first');
   if(!selCat)return alert('Select a category');
   const w=D.wallets.find(x=>x.id===wid);
   if(!w)return;
+  const cur=w.currency; // ← always matches wallet, no mismatch possible
   w.balance=Math.max(0,w.balance-amt);
   D.transactions.push({id:uid(),type:'spend',amount:amt,currency:cur,walletId:wid,category:selCat,note,date});
-  save();close('m-tx');render(currentS);
+  save();close('m-tx');renderAll();
+}
+
+function selIncSrc(tag){
+  document.getElementById('i-tag').value=tag;
+  ['stipend','housing','other'].forEach(t=>{
+    const b=document.getElementById('src-'+t);
+    if(!b)return;
+    const active=t===tag;
+    b.style.borderColor=active?'var(--amber)':'var(--border)';
+    b.style.background=active?'var(--amber-bg)':'var(--card)';
+    b.style.color=active?'var(--amber)':'var(--muted)';
+  });
 }
 
 function saveIncome(){
   const amt=parseFloat(document.getElementById('i-amt').value);
-  const cur=document.getElementById('i-cur').value;
   const wid=selW['income'];
   const date=document.getElementById('i-date').value||today();
   const src=document.getElementById('i-src').value.trim();
+  const tag=document.getElementById('i-tag').value||'other';
   if(!amt||amt<=0)return alert('Enter a valid amount');
-  if(!wid)return alert('Select a wallet');
+  if(!wid)return alert('Select a wallet first');
   const w=D.wallets.find(x=>x.id===wid);
   if(!w)return;
+  const cur=w.currency; // ← always matches wallet
   w.balance+=amt;
-  D.transactions.push({id:uid(),type:'income',amount:amt,currency:cur,walletId:wid,category:'income',note:src,date});
-  save();close('m-tx');render(currentS);
+  D.transactions.push({id:uid(),type:'income',amount:amt,currency:cur,walletId:wid,category:'income',incomeTag:tag,note:src||tag,date});
+  save();close('m-tx');renderAll();
 }
 
 function saveTransfer(){
@@ -1005,7 +1205,7 @@ function saveTransfer(){
   fw.balance=Math.max(0,fw.balance-amt);
   tw.balance+=toAmt;
   D.transactions.push({id:uid(),type:'transfer',amount:amt,currency:fw.currency,walletId:fId,toWalletId:tId,note,date});
-  save();close('m-tx');render(currentS);
+  save();close('m-tx');renderAll();
 }
 
 // WALLET MODAL
@@ -1041,14 +1241,14 @@ function saveWallet(){
   if(!name)return alert('Enter wallet name');
   if(id){const w=D.wallets.find(x=>x.id===id);if(w){w.name=name;w.currency=currency;w.balance=balance;w.icon=icon}}
   else D.wallets.push({id:uid(),name,currency,balance,icon});
-  save();close('m-wallet');renderWallets();
+  save();close('m-wallet');renderAll();
 }
 
 function deleteWallet(){
   const id=document.getElementById('w-id').value;
   if(!confirm('Delete this wallet?'))return;
   D.wallets=D.wallets.filter(w=>w.id!==id);
-  save();close('m-wallet');renderWallets();
+  save();close('m-wallet');renderAll();
 }
 
 function openTransferDirect(){
@@ -1133,22 +1333,20 @@ function saveDebt(){
     }
     D.debts.push({id:uid(),person,currency,amount,paid:0,note});
   }
-  save();close('m-debt');renderDebts();
-  if(currentS==='home')renderHome();
-  if(currentS==='wallets')renderWallets();
+  save();close('m-debt');renderAll();
 }
 
 function deleteDebt(){
   const id=document.getElementById('d-id').value;
   if(!confirm('Delete this debt?'))return;
   D.debts=D.debts.filter(d=>d.id!==id);
-  save();close('m-debt');renderDebts();
+  save();close('m-debt');renderAll();
 }
 
 function delDebt(id){
   if(!confirm('Delete this debt?'))return;
   D.debts=D.debts.filter(d=>d.id!==id);
-  save();renderDebts();
+  save();renderAll();
 }
 
 // PAY MODAL
@@ -1188,9 +1386,7 @@ function savePay(){
     D.transactions.push({id:uid(),type:'spend',amount:amt,currency:d.currency,walletId:selPayWallet,category:'debt_repay',note:`Paid to ${d.person}`,date:today()});
   }
   d.paid=Math.min(d.amount,(d.paid||0)+amt);
-  save();close('m-pay');renderDebts();
-  if(currentS==='home')renderHome();
-  if(currentS==='wallets')renderWallets();
+  save();close('m-pay');renderAll();
 }
 
 // CATEGORY MODAL
@@ -1207,7 +1403,6 @@ function saveCat(){
   D.categories.push({id:uid(),name,icon,color:CAT_COLORS[D.categories.length%CAT_COLORS.length]});
   save();close('m-cat');renderCats();
 }
-
 // EXPORT
 function exportData(){
   const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});
@@ -1228,63 +1423,88 @@ function renderStipendTimeline(){
   const msLeft=endDate-now;
   if(msLeft<=0){el.innerHTML='';return;}
 
-  // Count remaining full stipend months (stipend = 3000 RMB/month + 750 accommodation)
-  // Months: count from current month to July 2026
-  // Strategy: iterate months
+  // Total projected: March 2026 → half July 2026
+  // Count remaining full months from now to July
   let stipendMonths=0;
-  let accomMonths=0;
   const cur=new Date(now.getFullYear(),now.getMonth(),1);
-  const end=new Date(2026,6,1); // July 2026
+  const end=new Date(2026,6,1);
   let m=new Date(cur);
-  while(m<end){
-    stipendMonths++;
-    accomMonths++;
-    m.setMonth(m.getMonth()+1);
-  }
-  // Half month for July (15 days ~= 0.5)
+  while(m<end){stipendMonths++;m.setMonth(m.getMonth()+1);}
   const halfJuly=0.5;
-  const totalStipend=(stipendMonths-1+halfJuly)*3000; // already counted July as full above, adjust
-  const totalAccom=(stipendMonths-1+halfJuly)*750;
-  const totalGross=totalStipend+totalAccom;
+  const totalStipend=(stipendMonths+halfJuly)*3000;
+  const totalHousing=(stipendMonths+halfJuly)*750;
+  const totalGross=totalStipend+totalHousing;
   const daysLeft=Math.ceil(msLeft/(1000*60*60*24));
 
-  const dispC=cView==='PKR'?'PKR':'RMB';
-  const grossDisp=cView==='PKR'?fmt(totalGross*D.rate.v,'PKR'):fmt(totalGross,'RMB');
-  const stipDisp=cView==='PKR'?fmt(totalStipend*D.rate.v,'PKR'):fmt(totalStipend,'RMB');
-  const accomDisp=cView==='PKR'?fmt(totalAccom*D.rate.v,'PKR'):fmt(totalAccom,'RMB');
+  // What's actually been received (tagged transactions)
+  const recStipend=D.transactions
+    .filter(t=>t.type==='income'&&t.incomeTag==='stipend')
+    .reduce((s,t)=>s+toRMB(t.amount,t.currency),0);
+  const recHousing=D.transactions
+    .filter(t=>t.type==='income'&&t.incomeTag==='housing')
+    .reduce((s,t)=>s+toRMB(t.amount,t.currency),0);
+  const recTotal=recStipend+recHousing;
+  const pending=Math.max(0,totalGross-recTotal);
 
-  // Progress bar: how far through the degree are we (Sep 2023 → Jul 2026 = ~34 months)
-  const totalDeg=new Date('2026-07-15')-new Date('2023-09-01');
-  const elapsed=now-new Date('2023-09-01');
-  const degPct=Math.min(100,Math.max(0,(elapsed/totalDeg)*100));
+  // Progress bars
+  const degPct=Math.min(100,Math.max(0,((now-new Date('2023-09-01'))/(endDate-new Date('2023-09-01')))*100));
+  const recPct=totalGross>0?Math.min(100,(recTotal/totalGross)*100):0;
+
+  const disp=(v,c='RMB')=>cView==='PKR'?fmt(v*D.rate.v,'PKR'):fmt(v,c);
+
+  // Status label
+  const overdue=totalGross-recTotal-pending; // always 0 with max(0) above
+  const behindAmt=totalStipend+totalHousing - recTotal - pending;
+  // Months expected by now: from March 2026 to current month
+  const expectedByNow=(()=>{
+    let mn=0,mm=new Date(2026,2,1); // March 2026
+    while(mm<=now&&mm<endDate){mn++;mm.setMonth(mm.getMonth()+1);}
+    return Math.min(mn,stipendMonths+0.5);
+  })();
+  const expectedAmt=expectedByNow*3750; // 3000+750
+  const overduePending=Math.max(0,expectedAmt-recTotal);
 
   el.innerHTML=`
   <div style="background:linear-gradient(135deg,var(--card) 0%,var(--card2) 100%);border:1px solid var(--border);border-radius:16px;padding:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
       <div>
         <div style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)">Stipend Runway</div>
-        <div style="font-size:13px;font-weight:800;margin-top:2px">${daysLeft} days left · until July 15</div>
+        <div style="font-size:13px;font-weight:800;margin-top:2px">${daysLeft} days left · ends July 15</div>
       </div>
-      <div style="font-size:28px">🎓</div>
-    </div>
-    <div style="height:6px;background:var(--faint);border-radius:3px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:${degPct.toFixed(1)}%;background:linear-gradient(90deg,var(--amber),var(--green));border-radius:3px;transition:width .6s"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      <div style="background:var(--surface);border-radius:10px;padding:9px">
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Stipend</div>
-        <div class="mono" style="font-size:12px;font-weight:800;color:var(--amber)">${stipDisp}</div>
-      </div>
-      <div style="background:var(--surface);border-radius:10px;padding:9px">
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Accom.</div>
-        <div class="mono" style="font-size:12px;font-weight:800;color:var(--blue)">${accomDisp}</div>
-      </div>
-      <div style="background:var(--surface);border-radius:10px;padding:9px">
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Total</div>
-        <div class="mono" style="font-size:12px;font-weight:800;color:var(--green)">${grossDisp}</div>
+      <div style="text-align:right">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.7px">Received</div>
+        <div class="mono" style="font-size:16px;font-weight:800;color:var(--green)">${disp(recTotal)}</div>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:8px;text-align:center">Projected remaining income (stipend + accommodation allowance)</div>
+
+    <!-- Degree progress bar -->
+    <div style="font-size:9px;color:var(--muted);margin-bottom:3px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Degree progress</div>
+    <div style="height:5px;background:var(--faint);border-radius:3px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:${degPct.toFixed(1)}%;background:linear-gradient(90deg,var(--amber),var(--green));border-radius:3px"></div>
+    </div>
+
+    <!-- Received vs Pending bar -->
+    <div style="font-size:9px;color:var(--muted);margin-bottom:3px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Stipend received vs total expected</div>
+    <div style="height:8px;background:var(--faint);border-radius:4px;overflow:hidden;margin-bottom:10px;display:flex">
+      <div style="height:100%;width:${recPct.toFixed(1)}%;background:var(--green);border-radius:4px;transition:width .6s"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:${overduePending>0?'10':'0'}px">
+      <div style="background:var(--surface);border-radius:10px;padding:9px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">✅ Got</div>
+        <div class="mono" style="font-size:12px;font-weight:800;color:var(--green)">${disp(recTotal)}</div>
+      </div>
+      <div style="background:var(--surface);border-radius:10px;padding:9px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">⏳ Pending</div>
+        <div class="mono" style="font-size:12px;font-weight:800;color:var(--amber)">${disp(pending)}</div>
+      </div>
+      <div style="background:var(--surface);border-radius:10px;padding:9px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">📦 Total</div>
+        <div class="mono" style="font-size:12px;font-weight:800;color:var(--text)">${disp(totalGross)}</div>
+      </div>
+    </div>
+    ${overduePending>0?`<div style="background:var(--red-bg);border:1px solid rgba(248,113,113,.18);border-radius:10px;padding:9px;font-size:11px;color:var(--red);font-weight:700">⚠️ Overdue: ${disp(overduePending)} expected by now but not yet logged</div>`:''}
+    <div style="font-size:10px;color:var(--muted);margin-top:8px;text-align:center">¥3,000 stipend + ¥750 housing / month · Log income with 🎓 or 🏠 tag to update</div>
   </div>`;
 }
 
@@ -1366,7 +1586,7 @@ function saveEditTx(){
     const newW=D.wallets.find(w=>w.id===wid);
     if(newW) newW.balance+=amt;
   }
-  save(); close('m-edittx'); render(currentS);
+  save(); close('m-edittx'); renderAll();
 }
 
 function deleteEditTx(){
@@ -1381,7 +1601,7 @@ function deleteEditTx(){
     if(t.type==='income') w.balance=Math.max(0,w.balance-t.amount);
   }
   D.transactions=D.transactions.filter(x=>x.id!==id);
-  save(); close('m-edittx'); render(currentS);
+  save(); close('m-edittx'); renderAll();
 }
 
 // ══════════════════════════════════════════
@@ -1439,17 +1659,154 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 // ══════════════════════════════════════════
+// BUDGET LIMITS
+// ══════════════════════════════════════════
+function renderBudgetBars(bycat,dispC){
+  const el=document.getElementById('budgetBars');
+  if(!el)return;
+  const budgets=D.budgets||{};
+  const cats=D.categories.filter(c=>budgets[c.id]);
+  if(!cats.length){el.innerHTML=`<div style="font-size:12px;color:var(--muted);padding:8px 0">No limits set yet. Tap ✏️ Edit to add some.</div>`;return;}
+  el.innerHTML=cats.map(c=>{
+    const lim=budgets[c.id];
+    const spent=bycat[c.id]||0;
+    const pct=Math.min(100,(spent/lim)*100);
+    const over=spent>lim;
+    const barCol=over?'var(--red)':pct>75?'var(--amber)':'var(--green)';
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="font-weight:700">${c.icon} ${c.name}</span>
+        <span class="mono" style="color:${over?'var(--red)':'var(--muted)'}">${fmt(spent,dispC)} / ${fmt(lim,dispC)}${over?' ⚠️':''}</span>
+      </div>
+      <div style="height:6px;background:var(--faint);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${barCol};border-radius:3px;transition:width .4s"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openBudgetModal(){
+  if(!D.budgets)D.budgets={};
+  document.getElementById('budgetForm').innerHTML=D.categories.map(c=>`
+    <div class="fg">
+      <label class="fl">${c.icon} ${c.name}</label>
+      <div class="row">
+        <div style="width:60px;font-size:12px;color:var(--muted);padding:12px 8px;text-align:center">${c.id==='sent_home'||c.id==='debt_repay'?'₨ PKR':'¥ RMB'}</div>
+        <input class="fi mono" type="number" id="bgt-${c.id}" placeholder="No limit" inputmode="decimal" value="${D.budgets[c.id]||''}">
+      </div>
+    </div>`).join('');
+  open('m-budget');
+}
+
+function saveBudgets(){
+  if(!D.budgets)D.budgets={};
+  D.categories.forEach(c=>{
+    const v=parseFloat(document.getElementById('bgt-'+c.id)?.value);
+    if(v&&v>0)D.budgets[c.id]=v;
+    else delete D.budgets[c.id];
+  });
+  save();close('m-budget');renderAnalytics();
+}
+
+// ══════════════════════════════════════════
+// SEE ALL TRANSACTIONS (home)
+// ══════════════════════════════════════════
+let seeAll=false;
+function toggleSeeAll(){
+  seeAll=!seeAll;
+  const btn=document.getElementById('seeAllBtn');
+  if(btn)btn.textContent=seeAll?'Show less':'See all';
+  renderRecentList();
+}
+function renderRecentList(){
+  const sorted=[...D.transactions].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  const list=seeAll?sorted:sorted.slice(0,8);
+  const el=document.getElementById('recentList');
+  el.innerHTML=list.length?list.map(txHtml).join(''):'<div class="empty"><div class="empty-i">📭</div><div class="empty-t">No transactions yet. Hit + to add one!</div></div>';
+}
+
+// ══════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════
+function exportData(){
+  const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`hisaab-${today()}.json`;
+  a.click();
+}
+function importData(){document.getElementById('importFile').click();}
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const parsed=JSON.parse(ev.target.result);
+      if(!parsed.wallets||!parsed.transactions)return alert('Invalid backup file.');
+      if(!confirm(`This will replace ALL current data with the backup.\n\nWallets: ${parsed.wallets.length}\nTransactions: ${parsed.transactions.length}\nDebts: ${parsed.debts?.length||0}\n\nContinue?`))return;
+      D=parsed;save();renderAll();alert('✅ Data restored successfully!');
+    }catch(err){alert('Could not read file. Make sure it is a valid Hisaab backup.');}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ══════════════════════════════════════════
+// DELETE TRANSFER
+// ══════════════════════════════════════════
+function deleteTransfer(id){
+  const t=D.transactions.find(x=>x.id===id);
+  if(!t||t.type!=='transfer')return;
+  if(!confirm('Delete this transfer? Wallet balances will be reversed.'))return;
+  const fw=D.wallets.find(w=>w.id===t.walletId);
+  const tw=D.wallets.find(w=>w.id===t.toWalletId);
+  if(fw) fw.balance+=t.amount; // restore from-wallet
+  if(tw){
+    // reverse the converted amount
+    let toAmt=t.amount;
+    if(fw&&tw&&fw.currency!==tw.currency){
+      toAmt=fw.currency==='RMB'?t.amount*D.rate.v:t.amount/D.rate.v;
+    }
+    tw.balance=Math.max(0,tw.balance-toAmt);
+  }
+  D.transactions=D.transactions.filter(x=>x.id!==id);
+  save();renderAll();
+}
+
+// ══════════════════════════════════════════
+// THEME TOGGLE
+// ══════════════════════════════════════════
+function toggleTheme(){
+  const html=document.documentElement;
+  const current=D.settings.theme||'auto';
+  // cycle: auto → dark → light → auto
+  const next=current==='auto'?'dark':current==='dark'?'light':'auto';
+  D.settings.theme=next;save();applyTheme();
+}
+function applyTheme(){
+  const html=document.documentElement;
+  const t=D.settings.theme||'auto';
+  html.classList.remove('theme-dark','theme-light');
+  if(t==='dark')html.classList.add('theme-dark');
+  if(t==='light')html.classList.add('theme-light');
+  const btn=document.getElementById('themeBtn');
+  if(btn)btn.textContent=t==='dark'?'☀️':t==='light'?'⚙️':'🌙';
+  // tooltip hint
+  if(btn)btn.title=t==='dark'?'Switch to light':'t===light'?'Use system setting':'Switch to dark';
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 function init(){
   load();
   cView=D.settings.cv||'RMB';
   analyticsYM=ym(new Date());
+  applyTheme();
   renderRateBar();
   fetchRate();
   renderHome();
   setupPWA();
-  // Set pill state
   ['RMB','PKR','native'].forEach(v=>{
     const el=document.getElementById('pill-'+v);
     if(el)el.classList.toggle('active',v===cView);
